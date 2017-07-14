@@ -1,0 +1,26 @@
+{
+  "name": "scale",
+  "version": "0.0.1",
+  "description": "audio reactive three.js experiment",
+  "main": "main.js",
+  "dependencies": {
+    "connect-livereload": "^0.6.0",
+    "express": "^4.15.3",
+    "livereload": "^0.6.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magoni/scale.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/magoni/scale/issues"
+  },
+  "homepage": "https://github.com/magoni/scale#readme"
+}
