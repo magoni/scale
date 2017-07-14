@@ -121,7 +121,9 @@ function render() {
 	// Compute peak instantaneous power over the interval.
 	let peakInstantaneousPower = 0;
 
-	for (let i = 0; i < dataArray.length; i++) {
+	//TODO smoothing function!
+	//TODO experiment - raising i = hipass?
+	for (let i = 500; i < dataArray.length; i++) {
 		const power = dataArray[i] ** 2;
 		peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
 	}
