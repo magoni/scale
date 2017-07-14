@@ -1,4 +1,27 @@
-const detail = 30;
+// audio
+var context = new (window.AudioContext || window.webkitAudioContext)();
+var audio = new Audio();
+audio.src = 'scale.mp3';
+audio.autoplay = true;
+document.body.appendChild(audio);
+
+var analyser = context.createAnalyser();
+
+window.addEventListener('load', function(e) {
+  var source = context.createMediaElementSource(audio);
+  source.connect(analyser);
+  analyser.connect(context.destination);
+}, false);
+
+analyser.smoothingTimeConstant = 1;
+analyser.fftSize = 2048;
+var bufferLength = analyser.frequencyBinCount;
+var dataArray = new Uint8Array(bufferLength);
+analyser.getByteTimeDomainData(dataArray);
+
+// visual
+
+const detail = 25;
 
 const scene = new THREE.Scene();
 
@@ -17,6 +40,7 @@ const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.inner
 camera.position.set( 0, 0, 4 );
 
 var time = 1;
+var peakInstantaneousPowerDecibels = 0;
 
 // parametric function for geometry
 function parafunc ( u, t, optionalTarget ) {
@@ -25,9 +49,12 @@ function parafunc ( u, t, optionalTarget ) {
 	var v = 2 * Math.PI * t;
 	var x, y, z;
 
-    x = t * t + Math.sin(time*0.1 + v * v);
-    // x = (t * t + Math.log2(v/5));
-	// x = t*Math.cos( time * v ) * (Math.random() * 0.1) * u * u * 5;
+	var test = (peakInstantaneousPowerDecibels-42.0)*100;
+
+    // x = t * t + Math.sin(time*0.1 + v * v);
+    // x = (t * t + Math.log2(v/5)); //static
+	// x = Math.cos(Math.sqrt(v)+0.1*time);
+	x = Math.cos(Math.sqrt(v)+0.01*test);
 	y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) );
 	z = Math.sin ( u ) * Math.cos (u * 10);
 
@@ -88,10 +115,17 @@ function render() {
 	var delta = clock.getDelta();
 	time = clock.getElapsedTime() * 10;
 
-	// change geometry here
-	// TODO figure out how to update the vertices??? uuh
-	// geometry = new THREE.ParametricGeometry( parafunc, 25, 25 );
 	updateGeometry();
+
+	analyser.getByteTimeDomainData(dataArray);
+	// Compute peak instantaneous power over the interval.
+	let peakInstantaneousPower = 0;
+
+	for (let i = 0; i < dataArray.length; i++) {
+		const power = dataArray[i] ** 2;
+		peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
+	}
+	peakInstantaneousPowerDecibels = 10 * Math.log10(peakInstantaneousPower);
 
 	renderer.render( scene, camera );
 }
