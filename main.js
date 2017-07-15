@@ -14,15 +14,15 @@ window.addEventListener('load', function(e) {
 }, false);
 
 analyser.smoothingTimeConstant = 1;
-analyser.fftSize = 2048;
+analyser.fftSize = 256;
 var bufferLength = analyser.frequencyBinCount;
-var dataArray = new Uint8Array(bufferLength);
-analyser.getByteTimeDomainData(dataArray);
+var timeDomainData = new Uint8Array(bufferLength);
+analyser.getByteTimeDomainData(timeDomainData);
+var normalisedLevel = 0;
+var smoothedLevel = 0;
 
 // visual
-
 const detail = 25;
-
 const scene = new THREE.Scene();
 
 // light
@@ -49,12 +49,10 @@ function parafunc ( u, t, optionalTarget ) {
 	var v = 2 * Math.PI * t;
 	var x, y, z;
 
-	var test = (peakInstantaneousPowerDecibels-42.0)*100;
-
     // x = t * t + Math.sin(time*0.1 + v * v);
     // x = (t * t + Math.log2(v/5)); //static
 	// x = Math.cos(Math.sqrt(v)+0.1*time);
-	x = Math.cos(Math.sqrt(v)+0.01*test);
+	x = Math.cos(Math.sqrt(v)+0.01*normalisedLevel);
 	y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) );
 	z = Math.sin ( u ) * Math.cos (u * 10);
 
@@ -88,10 +86,6 @@ const controls = new THREE.OrbitControls( camera, renderer.domElement );
 // clock
 var clock = new THREE.Clock();
 
-animate();
-
-window.addEventListener( 'resize', onResize );
-
 function onResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
@@ -111,23 +105,31 @@ function animate() {
 	render();
 }
 
+function updateAudioLevel() {
+	let sum = 0;
+	let peakInstantaneousPower = 0;
+	analyser.getByteTimeDomainData(timeDomainData);
+
+	//TODO experiment - raising i = hipass?
+	for (let i = 0; i < timeDomainData.length; i++) {
+		const power = timeDomainData[i] ** 2;
+		peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
+	}
+
+	peakInstantaneousPowerDecibels = 10 * Math.log10(peakInstantaneousPower);
+	normalisedLevel = (peakInstantaneousPowerDecibels-42.0)*100;
+	//todo smooth levels
+}
+
 function render() {
 	var delta = clock.getDelta();
 	time = clock.getElapsedTime() * 10;
 
 	updateGeometry();
-
-	analyser.getByteTimeDomainData(dataArray);
-	// Compute peak instantaneous power over the interval.
-	let peakInstantaneousPower = 0;
-
-	//TODO smoothing function!
-	//TODO experiment - raising i = hipass?
-	for (let i = 500; i < dataArray.length; i++) {
-		const power = dataArray[i] ** 2;
-		peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
-	}
-	peakInstantaneousPowerDecibels = 10 * Math.log10(peakInstantaneousPower);
+	updateAudioLevel();
 
 	renderer.render( scene, camera );
 }
+
+animate();
+window.addEventListener( 'resize', onResize );
