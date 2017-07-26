@@ -41,7 +41,7 @@ const pointLight = new THREE.PointLight(0xFFFFFF);
 
 pointLight.position.x = 0;
 pointLight.position.y = 0;
-pointLight.position.z = 100;
+pointLight.position.z = 10;
 
 scene.add(pointLight);
 
@@ -55,7 +55,7 @@ var peakInstantaneousPowerDecibels = 0;
 var shape = 1;
 var numShapes = 6;
 var norm = 1;
-// parametric function for geometry
+
 function parafunc ( u, t, optionalTarget ) {
     var result = optionalTarget || new THREE.Vector3();
 
@@ -65,8 +65,8 @@ function parafunc ( u, t, optionalTarget ) {
     // x = (t * t + Math.log2(v/5)); //static
     norm = Math.pow(Math.abs(normalisedLevel+33), 2);
 
-    // v1 log wave
     if (shape === 1) {
+        // 1 log wave
         x = Math.cos(Math.sqrt(v)+normalisedLevel);
         y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) );
         z = Math.sin ( u ) * Math.cos (u * 10);
@@ -109,21 +109,21 @@ function parafunc ( u, t, optionalTarget ) {
 
 // meshes
 var geometry = new THREE.ParametricGeometry( parafunc, detail, detail );
-geometry.dynamic = true;
-const material = new THREE.MeshNormalMaterial( { overdraw: 0.5 } );
-// const material = new THREE.MeshPhongMaterial( {
-//     color: 0xffffff,
-//     specular: 0xffffff,
-//     combine: THREE.MultiplyOperation,
-//     side: THREE.DoubleSide,
-//     // shading: THREE.FlatShading,
-//     shininess: 50,
-//       reflectivity: 1.0
-// } );
+geometry.dynamic = false;
+// const material = new THREE.MeshNormalMaterial( { overdraw: 0.5 } );
+const material = new THREE.MeshPhongMaterial( {
+    color: 0xb1d2ef,
+    specular: 0xffc0cb,
+    combine: THREE.MultiplyOperation,
+    side: THREE.DoubleSide,
+    // shading: THREE.FlatShading,
+    shininess: 50,
+    reflectivity: 1.0
+} );
 material.transparent = true;
 material.opacity = 0.7;
 
-material.emissive = new THREE.Color( 0x555555 );
+// material.emissive = new THREE.Color( 0xffc0cb );
 
 const mesh = new THREE.Mesh( geometry, material ) ;
 scene.add( mesh );
@@ -171,8 +171,10 @@ function render() {
     time = clock.getElapsedTime() * 10;
 
     // if (Math.floor(time) % 10 === 0) {
-    if (normalisedLevel > -35 || Math.floor(time) % 100 === 0) {
+    // if (normalisedLevel > -35 || Math.floor(time) % 100 === 0) {
+    if (normalisedLevel > -34.6) {
         shape = Math.floor(Math.random()*numShapes);
+        mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() + 0.3;
     }
 
     // mesh.rotation.x+=.01;
