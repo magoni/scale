@@ -3,14 +3,25 @@ var context = new (window.AudioContext || window.webkitAudioContext)();
 var audio = new Audio();
 audio.src = 'scale.mp3';
 audio.autoplay = true;
+audio.loop = true;
+audio.currentTime = 20; //TODO
 document.body.appendChild(audio);
 
 var analyser = context.createAnalyser();
 
-window.addEventListener('load', function(e) {
+var filter = context.createBiquadFilter();
+filter.type = 'bandpass';
+filter.frequency.value = 4000;
+filter.Q.value = 2;
+
+window.addEventListener('load', function() {
   var source = context.createMediaElementSource(audio);
-  source.connect(analyser);
-  analyser.connect(context.destination);
+  // source -> bandpass filter -> analyser
+  source.connect(filter);
+  filter.connect(analyser);
+
+  // source audio -> output
+  source.connect(context.destination);
 }, false);
 
 analyser.smoothingTimeConstant = 1;
@@ -22,12 +33,11 @@ var normalisedLevel = 0;
 var smoothedLevel = 0;
 
 // visual
-const detail = 25;
+const detail = 40;
 const scene = new THREE.Scene();
 
 // light
-const pointLight =
-  new THREE.PointLight(0xFFFFFF);
+const pointLight = new THREE.PointLight(0xFFFFFF);
 
 pointLight.position.x = 0;
 pointLight.position.y = 0;
@@ -42,31 +52,76 @@ camera.position.set( 0, 0, 4 );
 var time = 1;
 var peakInstantaneousPowerDecibels = 0;
 
+var shape = 1;
+var numShapes = 6;
+var norm = 1;
 // parametric function for geometry
 function parafunc ( u, t, optionalTarget ) {
-	var result = optionalTarget || new THREE.Vector3();
+    var result = optionalTarget || new THREE.Vector3();
 
-	var v = 2 * Math.PI * t;
-	var x, y, z;
+    var v = 2 * Math.PI * t;
+    var x, y, z;
 
-    // x = t * t + Math.sin(time*0.1 + v * v);
     // x = (t * t + Math.log2(v/5)); //static
-	// x = Math.cos(Math.sqrt(v)+0.1*time);
-	x = Math.cos(Math.sqrt(v)+0.01*normalisedLevel);
-	y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) );
-	z = Math.sin ( u ) * Math.cos (u * 10);
+    norm = Math.pow(Math.abs(normalisedLevel+33), 2);
 
-	return result.set( x, y, z );
+    // v1 log wave
+    if (shape === 1) {
+        x = Math.cos(Math.sqrt(v)+normalisedLevel);
+        y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) );
+        z = Math.sin ( u ) * Math.cos (u * 10);
+    } else if (shape === 2) {
+        // pretty ribbons
+        // x = t * t + Math.sin(time*0.1 + v * v + normalisedLevel);
+        // y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1) * normalisedLevel/2.0 );
+        // z = Math.sin(normalisedLevel*v*v*normalisedLevel); //v1
+        // z = Math.cos(u*u)*Math.sin(normalisedLevel*u*u*normalisedLevel); //v2 more 3d
+        x = Math.cos(Math.sqrt(v)+0.01*normalisedLevel);
+        y = Math.cos( v * v * 3 * (Math.cos(u/2) * 0.1)*(Math.abs(normalisedLevel*0.1)) );
+        z = Math.sin ( u ) * Math.cos (u * 10);
+    } else if (shape === 3) {
+        x = Math.cos(Math.sin(v*t)*Math.abs(normalisedLevel));
+        y = Math.cos( v * Math.cos(v) * 3 * (Math.cos(u/2) * 0.1) * v );
+        z = (Math.sin(time/10+normalisedLevel)*0.10)*5*Math.sin(v*v);
+    } else if (shape === 4) {
+        // 4
+        x = Math.sin(v);
+        y = Math.cos(u*3+(20*Math.abs(normalisedLevel+33.0))*time*0.0005);
+        z = Math.sin(u+normalisedLevel) * Math.cos(u * 10);
+    } else {
+        //5
+        x = Math.sin(u)*Math.sin(t*(Math.pow(Math.abs(normalisedLevel+33), 2)));
+        y = Math.cos(u+t);
+        z = Math.sin(u) * Math.cos(u * 10) * 2* Math.sin(norm+t);
+
+        // x = Math.sin(v);
+        // y = Math.cos(v);
+        // z = u;
+
+        // x = u * Math.sin(v);
+        // y = u * Math.cos(v);
+        // z = u * Math.sin(v);
+    }
+
+
+    return result.set( x, y, z );
 }
 
 // meshes
 var geometry = new THREE.ParametricGeometry( parafunc, detail, detail );
 geometry.dynamic = true;
-const material = new THREE.MeshLambertMaterial( {
-	color: 0xffffff,
-	side: THREE.DoubleSide,
-	shading: THREE.FlatShading
-} );
+const material = new THREE.MeshNormalMaterial( { overdraw: 0.5 } );
+// const material = new THREE.MeshPhongMaterial( {
+//     color: 0xffffff,
+//     specular: 0xffffff,
+//     combine: THREE.MultiplyOperation,
+//     side: THREE.DoubleSide,
+//     // shading: THREE.FlatShading,
+//     shininess: 50,
+//       reflectivity: 1.0
+// } );
+material.transparent = true;
+material.opacity = 0.7;
 
 material.emissive = new THREE.Color( 0x555555 );
 
@@ -87,48 +142,51 @@ const controls = new THREE.OrbitControls( camera, renderer.domElement );
 var clock = new THREE.Clock();
 
 function onResize() {
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
-	renderer.setSize( window.innerWidth, window.innerHeight );
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
 function updateGeometry() {
-	mesh.geometry.dispose();
-	mesh.geometry = new THREE.ParametricGeometry(parafunc, detail, detail);
-}
-
-function animate() {
-	requestAnimationFrame( animate );
-    // mesh.rotation.x+=.01;
-    // mesh.rotation.y+=.01;
-
-	render();
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.ParametricGeometry(parafunc, detail, detail);
 }
 
 function updateAudioLevel() {
-	let sum = 0;
-	let peakInstantaneousPower = 0;
-	analyser.getByteTimeDomainData(timeDomainData);
+    let peakInstantaneousPower = 0;
+    analyser.getByteTimeDomainData(timeDomainData);
 
-	//TODO experiment - raising i = hipass?
-	for (let i = 0; i < timeDomainData.length; i++) {
-		const power = timeDomainData[i] ** 2;
-		peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
-	}
+    for (let i = 0; i < timeDomainData.length; i++) {
+        const power = timeDomainData[i] * 2;
+        peakInstantaneousPower = Math.max(power, peakInstantaneousPower);
+    }
 
-	peakInstantaneousPowerDecibels = 10 * Math.log10(peakInstantaneousPower);
-	normalisedLevel = (peakInstantaneousPowerDecibels-42.0)*100;
-	//todo smooth levels
+    peakInstantaneousPowerDecibels = 10 * Math.log10(peakInstantaneousPower);
+    normalisedLevel = (peakInstantaneousPowerDecibels-42.0)*2;
+    //todo smooth levels?
 }
 
 function render() {
-	var delta = clock.getDelta();
-	time = clock.getElapsedTime() * 10;
+    var delta = clock.getDelta();
+    time = clock.getElapsedTime() * 10;
 
-	updateGeometry();
-	updateAudioLevel();
+    // if (Math.floor(time) % 10 === 0) {
+    if (normalisedLevel > -35 || Math.floor(time) % 100 === 0) {
+        shape = Math.floor(Math.random()*numShapes);
+    }
 
-	renderer.render( scene, camera );
+    // mesh.rotation.x+=.01;
+    mesh.rotation.y+=.005;
+
+    updateGeometry();
+    updateAudioLevel();
+
+    renderer.render( scene, camera );
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
 }
 
 animate();
