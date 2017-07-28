@@ -1,4 +1,5 @@
 //TODO tree-shaking three.js
+// https://stackoverflow.com/questions/41538767/how-do-i-tree-shake-three-js-using-webpack-or-rollup/41558527#41558527
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const path = require('path');
@@ -12,7 +13,7 @@ module.exports = {
     module: {
         rules: [
             { test: /\.js$/, use: 'babel-loader', exclude: /node_modules/ },
-            { test: /three\/examples\/js/, use: 'imports-loader?THREE=three' }
+            { test: /OrbitControls/, use: ['imports-loader?THREE=three', 'exports-loader?THREE.OrbitControls'] }
         ]
     },
     resolve: {

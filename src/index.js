@@ -1,5 +1,5 @@
 import { Scene, PointLight, PerspectiveCamera, Vector3, ParametricGeometry, MeshNormalMaterial, MeshPhongMaterial, Color, Mesh, WebGLRenderer, Clock, MultiplyOperation, DoubleSide } from 'three';
-import 'three-examples/controls/OrbitControls';
+import OrbitControls from 'three-examples/controls/OrbitControls.js';
 
 // audio
 var context = new (window.AudioContext || window.webkitAudioContext)();
