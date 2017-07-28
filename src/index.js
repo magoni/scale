@@ -1,4 +1,3 @@
-import 'babel-polyfill';
 import { Scene, PointLight, PerspectiveCamera, Vector3, ParametricGeometry, MeshNormalMaterial, MeshPhongMaterial, Color, Mesh, WebGLRenderer, Clock, MultiplyOperation, DoubleSide } from 'three';
 import OrbitControls from 'orbit-controls-es6';
 
